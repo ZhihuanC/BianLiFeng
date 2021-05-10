@@ -1,43 +1,52 @@
 ## 数据读取
+```python
 import pandas as pd
 data = pd.read_excel('测距表.xlsx')
+```
 ## 样本数据
+``` python
 data.head()
+```
 ## 数据处理
 合成便利蜂门店名称
+``` python
 def merge_bee(data):
     for i in range(len(data)):
         if data.loc[i,'测距目标品牌']=='便利蜂':
             data.loc[i,'门店名称']='便利蜂'+data.loc[i,'门店名称']
     return data
+   ```
 清理711门店名称
 可清理大部分711门店数据
+``` python
 def clean_711(data):
     for i in range(len(data)):
         if data.loc[i,'测距目标品牌']=='711':
             if data['城市'] != '上海':
-                data.loc[i,'门店名称']=str(data.loc[i,'a.competitor_name'])
+                data.loc[i,'门店名称']=str(data.loc[i,'门店名称'])
                 if data.loc[i,'门店名称'][:3] == '711':
-                    data.loc[i,'门店名称']=data.loc[i,'a.competitor_name'][3:]
+                    data.loc[i,'门店名称']=data.loc[i,'门店名称'][3:]
                 if data.loc[i,'门店名称'][:4] == '7-11':
-                    data.loc[i,'门店名称']=data.loc[i,'a.competitor_name'][4:]
+                    data.loc[i,'门店名称']=data.loc[i,'门店名称'][4:]
                 if data.loc[i,'门店名称'][:6] == '711便利店':
                     data.loc[i,'门店名称']=data.loc[i,'门店名称'][6:]
     return data
 def merge_name(data):
-  711推荐标准名称：7-ELEVEn
+  # 711推荐标准名称：7-ELEVEn
     for i in range(len(data)):
         if data.loc[i,'测距目标品牌'] == '711':
             data.loc[i,'测距目标品牌']=str(data.loc[i,'测距目标品牌'])
-            #data['门店名称']='('+data['门店名称']+')' 
+            # data['门店名称']='('+data['门店名称']+')' 
             data.loc[i,'门店名称']='7-ELEVEn'+data.loc[i,'门店名称']
     return data
+  ```
 建议711测试品牌名称为“7-ELEVEn”。上海711门店多以“7-11”开头，建议单独将上海711命名为“7-11”。
 完成以上初步数据处理后，应将所有711门店手动在地图上检测，如非高德系统内711门店名称，需修改为高德系统命名。
 （大部分情况下无法利用数据中门店名称在高德上搜索到相关711门店，建议搜索商圈，利用搜周边功能搜索商圈周围711门店。
 
 
 去“总旗”，“客流量”，“底商”，可清理大部分数据
+``` python
 def clean(data):
   for i in range(len(data)):
     if data.loc[i,'元素名称'][:3] == '总旗-':
@@ -55,10 +64,11 @@ def clean(data):
     if data.loc[i,'元素名称'][-3:] == '客流量':
         data.loc[i,'元素名称']=data.loc[i,'元素名称'][:-3]
   return data
-  
+  ```
 为提高高德api测距精准度，元素名称建议标明分店名称
 
 # 高德API测距
+```python
 import requests
 import json
 def get_address(city,keywords,key='89653f400f20be155cfd3f5d91eb57e9'):
@@ -96,7 +106,7 @@ def get_dis(a,b,key='89653f400f20be155cfd3f5d91eb57e9'):
         
         return error
 def get_output(data):
-   将产出的测距数据加到原数据集中
+   # 将产出的测距数据加到原数据集中
   se_distance=[]
   for i in range(len(data)):
     aa=data.loc[i,'元素名称']
@@ -107,11 +117,12 @@ def get_output(data):
     k=get_dis(a['coord'],b['coord'])
     se_distance.append(k)
   return se_distance
-  
+  ```
 注： 使用该代码需要自行补充自己申请的高德api密钥
 所有数据按流程进行全面处理后，预计能够爬取98.5%的数据
 
 # 筛选输出项
+```python
 def filter(distance):       # 该函数将所有测距数据进行筛选，分成高置信与低置信数据
     threshold1=500
     threshold2=7         #该阈值是通过观察训练数据集得出，测距超过700米的数据，其门店与元素名称不准确的概率增加
@@ -137,3 +148,4 @@ def fetch(data):
     data=merge(data,distance)
     out(data)
 fetch(data)
+```
