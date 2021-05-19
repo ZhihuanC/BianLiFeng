@@ -4,11 +4,13 @@ import pandas as pd
 data = pd.read_excel('测距表.xlsx')
 ```
 ## 样本数据
+高德测距原始数据中，数据集须有“元素名称”，“测试目标品牌”，“门店名称”，“测距目标品牌”，“城市”
 ``` python
 data.head()
 ```
 ## 数据处理
 合成便利蜂门店名称
+注意便利蜂的蜂字不要错打成山峰的峰
 ``` python
 def merge_bee(data):
     for i in range(len(data)):
@@ -21,8 +23,8 @@ def merge_bee(data):
 ``` python
 def clean_711(data):
     for i in range(len(data)):
-        if data.loc[i,'测距目标品牌']=='711':
-            if data['城市'] != '上海':
+        if data.loc[i,'测距目标品牌']==711:
+            if data.loc[i,'城市'] != '上海':
                 data.loc[i,'门店名称']=str(data.loc[i,'门店名称'])
                 if data.loc[i,'门店名称'][:3] == '711':
                     data.loc[i,'门店名称']=data.loc[i,'门店名称'][3:]
@@ -30,13 +32,18 @@ def clean_711(data):
                     data.loc[i,'门店名称']=data.loc[i,'门店名称'][4:]
                 if data.loc[i,'门店名称'][:6] == '711便利店':
                     data.loc[i,'门店名称']=data.loc[i,'门店名称'][6:]
+                if data.loc[i,'门店名称'][:7] == '7-11便利店':
+                    data.loc[i,'门店名称']=data.loc[i,'门店名称'][7:]
+                if data.loc[i,'门店名称'][:7] == '711-便利店':
+                    data.loc[i,'门店名称']=data.loc[i,'门店名称'][7:]
     return data
 def merge_name(data):
   # 711推荐标准名称：7-ELEVEn
+  # data['测距目标品牌']='7-ELEVEn'
     for i in range(len(data)):
-        if data.loc[i,'测距目标品牌'] == '711':
-            data.loc[i,'测距目标品牌']=str(data.loc[i,'测距目标品牌'])
-            # data['门店名称']='('+data['门店名称']+')' 
+        if data.loc[i,'测距目标品牌'] == 711:
+            data.loc[i,'门店名称']=str(data.loc[i,'门店名称'])
+            #data['门店名称']='('+data['门店名称']+')' 
             data.loc[i,'门店名称']='7-ELEVEn'+data.loc[i,'门店名称']
     return data
   ```
@@ -45,9 +52,11 @@ def merge_name(data):
 （大部分情况下无法利用数据中门店名称在高德上搜索到相关711门店，建议搜索商圈，利用搜周边功能搜索商圈周围711门店。
 
 
-去“总旗”，“客流量”，“底商”，可清理大部分数据
+批量清楚数据中的杂质
 ``` python
+# 清理元素名称中的杂质
 def clean(data):
+  data['元素名称']=data['元素名称'].astype(str)
   for i in range(len(data)):
     if data.loc[i,'元素名称'][:3] == '总旗-':
       data.loc[i,'元素名称']=data.loc[i,'元素名称'][3:]
@@ -63,6 +72,31 @@ def clean(data):
     
     if data.loc[i,'元素名称'][-3:] == '客流量':
         data.loc[i,'元素名称']=data.loc[i,'元素名称'][:-3]
+    if data.loc[i,'元素名称'][-3:] == '-居住':
+        data.loc[i,'元素名称']=data.loc[i,'元素名称'][:-3]
+
+    if data.loc[i,'元素名称'][-3:] == '-办公':
+        data.loc[i,'元素名称']=data.loc[i,'元素名称'][:-3]
+    if data.loc[i,'元素名称'][-3:] == '-住宅':
+        data.loc[i,'元素名称']=data.loc[i,'元素名称'][:-3]
+    if data.loc[i,'元素名称'][-3:] == '－居住':
+        data.loc[i,'元素名称']=data.loc[i,'元素名称'][:-3]
+    if data.loc[i,'元素名称'][-3:] == '-居住':
+        data.loc[i,'元素名称']=data.loc[i,'元素名称'][:-3]
+    if data.loc[i,'元素名称'][-4:] == '（住宅）':
+        data.loc[i,'元素名称']=data.loc[i,'元素名称'][:-4]
+    if data.loc[i,'元素名称'][-4:] == '（居住）':
+        data.loc[i,'元素名称']=data.loc[i,'元素名称'][:-4]
+    if data.loc[i,'元素名称'][-4:] == '（综合）':
+        data.loc[i,'元素名称']=data.loc[i,'元素名称'][:-4]
+    if data.loc[i,'元素名称'][-4:] == '（独立）':
+        data.loc[i,'元素名称']=data.loc[i,'元素名称'][:-4]
+    if data.loc[i,'元素名称'][-3:] == '-员工':
+        data.loc[i,'元素名称']=data.loc[i,'元素名称'][:-3]
+    if data.loc[i,'元素名称'][-5:] == '-门前客流':
+        data.loc[i,'元素名称']=data.loc[i,'元素名称'][:-5]
+    if data.loc[i,'元素名称'][-10:] == '（同侧150米以内）':
+        data.loc[i,'元素名称']=data.loc[i,'元素名称'][:-10]
   return data
   ```
 为提高高德api测距精准度，元素名称建议标明分店名称
@@ -124,13 +158,21 @@ def get_output(data):
 # 筛选输出项
 ```python
 def filter(distance):       # 该函数将所有测距数据进行筛选，分成高置信与低置信数据
-    threshold1=500
-    threshold2=7         #该阈值是通过观察训练数据集得出，测距超过700米的数据，其门店与元素名称不准确的概率增加
+    threshold1=250
+    threshold2=700
+    threshold3=7         #该阈值是通过观察训练数据集得出，测距超过700米的数据，其门店与元素名称不准确的概率增加
     for i in range(len(data)):
         if distance[i] != 'ND':
-            if (data.loc[i,'测距']>threshold1) | (data.loc[i,'测距']<=threshold2):
-                data.loc[i,'测距']='LC'    #LC = Low Confidence 
+            if (distance[i]>threshold2)|(distance[i]<=threshold3):
+                distance[i]='LC'    #LC = Low Confidence
+            elif (distance[i]>=threshold1)&(distance[i]<=threshold2):
+                distance[i]='MC'    #MC = Medium Confidence
     return distance
+def merge(data,distance):
+    data['测距']=distance
+    return data
+def out(data):
+    data.to_excel('竞对测距.xlsx',index=False)
 def merge(data,distance):
     data['测距']=distance
     return data
